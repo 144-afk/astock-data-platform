@@ -1,5 +1,5 @@
 #!/bin/bash
-# 数据采集运行脚本
+# 数据采集运行脚本 (SQLite 版本)
 
 set -e
 
@@ -23,7 +23,19 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --init-db)
-            bash scripts/init-db.sh
+            # 确保 data 目录存在
+            mkdir -p data-collector/data
+            cd data-collector
+            if [ ! -d ".venv" ]; then
+                echo "Creating Python virtual environment..."
+                python3 -m venv .venv
+            fi
+            source .venv/bin/activate
+            python3 -c "
+from database import init_db
+init_db()
+print('Database tables created successfully')
+"
             exit 0
             ;;
         *)
@@ -33,22 +45,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# 确保 data 目录存在
+mkdir -p data-collector/data
+
 # 检查 Python 虚拟环境
 if [ ! -d "data-collector/.venv" ]; then
-    echo "创建 Python 虚拟环境..."
-    cd data-collector
-    uv venv
-    source .venv/bin/activate
-    uv sync
-    cd ..
-else
-    source data-collector/.venv/bin/activate
+    echo "Error: Python virtual environment not found. Run with --init-db first."
+    exit 1
 fi
 
-# 加载环境变量
-if [ -f "data-collector/.env" ]; then
-    export $(grep -v '^#' data-collector/.env | xargs)
-fi
+source data-collector/.venv/bin/activate
 
 # 运行采集脚本
 cd data-collector

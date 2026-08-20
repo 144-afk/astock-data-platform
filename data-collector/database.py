@@ -1,22 +1,25 @@
-"""数据库连接配置"""
+"""数据库连接配置 - SQLite 版本"""
 import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# SQLite 数据库路径
+DB_DIR = Path(__file__).parent / "data"
+DB_DIR.mkdir(exist_ok=True)
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/a_stock_data"
+    f"sqlite:///{DB_DIR / 'a_stock_data.db'}"
 )
 
 engine = create_engine(
     DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False
+    echo=False,
+    connect_args={"check_same_thread": False}  # SQLite 需要
 )
 
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
@@ -35,3 +38,4 @@ def init_db():
     """初始化数据库表"""
     from models import Base
     Base.metadata.create_all(bind=engine)
+    print(f"Database initialized at: {DB_DIR / 'a_stock_data.db'}")

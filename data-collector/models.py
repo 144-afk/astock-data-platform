@@ -6,6 +6,7 @@ from sqlalchemy import (
     Numeric, BigInteger, Index, UniqueConstraint, text
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+import os
 
 
 class Base(DeclarativeBase):
@@ -32,7 +33,7 @@ class StockDaily(Base):
     amount = Column(Numeric(20, 4), comment="成交额(元)")
     turnover = Column(Numeric(10, 6), comment="换手率(%)")
     
-    created_at = Column(DateTime, default=datetime.now, server_default=text("NOW()"))
+    created_at = Column(DateTime, default=datetime.now, server_default=text("CURRENT_TIMESTAMP"))
     
     __table_args__ = (
         UniqueConstraint("code", "trade_date", name="uq_stock_daily_code_date"),
@@ -60,7 +61,7 @@ class DragonTigerList(Base):
     
     reason = Column(String(200), comment="上榜原因")
     
-    created_at = Column(DateTime, default=datetime.now, server_default=text("NOW()"))
+    created_at = Column(DateTime, default=datetime.now, server_default=text("CURRENT_TIMESTAMP"))
     
     __table_args__ = (
         UniqueConstraint("trade_date", "code", "reason", name="uq_dtl_date_code_reason"),
@@ -87,7 +88,7 @@ class DragonTigerDetail(Base):
     
     direction = Column(String(10), comment="买卖方向(buy/sell)")
     
-    created_at = Column(DateTime, default=datetime.now, server_default=text("NOW()"))
+    created_at = Column(DateTime, default=datetime.now, server_default=text("CURRENT_TIMESTAMP"))
     
     __table_args__ = (
         Index("ix_dtd_date_code", "trade_date", "code"),

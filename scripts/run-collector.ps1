@@ -1,4 +1,4 @@
-# A股数据采集脚本 - Windows 版本
+# A股数据采集脚本 - Windows 版本 (SQLite)
 # 使用方法:
 #   .\scripts\run-collector.ps1                    # 采集今日数据
 #   .\scripts\run-collector.ps1 -Date "2024-01-15" # 采集指定日期
@@ -14,15 +14,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# 确保 data 目录存在
+if (-not (Test-Path "data-collector\data")) {
+    New-Item -ItemType Directory -Path "data-collector\data" | Out-Null
+}
+
 # 初始化数据库
 if ($InitDb) {
     Write-Host "=== Initializing database ===" -ForegroundColor Green
-    
-    if (-not $env:DATABASE_URL) {
-        Write-Host "Error: DATABASE_URL environment variable not set" -ForegroundColor Red
-        Write-Host "Example: `$env:DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/a_stock_data'"
-        exit 1
-    }
     
     Set-Location data-collector
     
@@ -47,13 +46,6 @@ print('Database tables created successfully')
 # 检查虚拟环境
 if (-not (Test-Path "data-collector\.venv")) {
     Write-Host "Error: Python virtual environment not found. Run with -InitDb first." -ForegroundColor Red
-    exit 1
-}
-
-# 检查 DATABASE_URL
-if (-not $env:DATABASE_URL) {
-    Write-Host "Error: DATABASE_URL environment variable not set" -ForegroundColor Red
-    Write-Host "Example: `$env:DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/a_stock_data'"
     exit 1
 }
 

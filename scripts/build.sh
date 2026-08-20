@@ -11,6 +11,9 @@ pnpm install --prefer-frozen-lockfile --prefer-offline --loglevel debug --report
 echo "=== Generating Prisma Client ==="
 npx prisma generate
 
+echo "=== Pushing Prisma schema to SQLite ==="
+npx prisma db push
+
 echo "=== Building the Next.js project ==="
 pnpm next build
 
@@ -27,7 +30,7 @@ if [ -d "data-collector" ]; then
     source .venv/bin/activate
     echo "Installing Python dependencies..."
     pip install --upgrade pip
-    pip install akshare sqlalchemy psycopg2-binary pandas python-dotenv
+    pip install akshare sqlalchemy pandas python-dotenv
     cd ..
 fi
 

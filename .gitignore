@@ -56,6 +56,11 @@ ehthumbs.db
 data-collector/.env
 data-collector/.venv/
 data-collector/__pycache__/
+data-collector/data/*.db
+
+# SQLite database
+data/*.db
+prisma/*.db
 output.log
 *.log
 *.log.*

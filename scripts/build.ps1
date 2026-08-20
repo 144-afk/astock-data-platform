@@ -1,4 +1,4 @@
-# A股数据平台 - Windows 构建脚本
+# A股数据平台 - Windows 构建脚本 (SQLite 版本)
 # 使用方法: .\scripts\build.ps1
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +8,9 @@ pnpm install --prefer-frozen-lockfile --prefer-offline
 
 Write-Host "=== Generating Prisma Client ===" -ForegroundColor Green
 npx prisma generate
+
+Write-Host "=== Pushing Prisma schema to SQLite ===" -ForegroundColor Green
+npx prisma db push
 
 Write-Host "=== Building the Next.js project ===" -ForegroundColor Green
 pnpm next build
@@ -29,7 +32,7 @@ if (Test-Path "data-collector") {
     
     Write-Host "Installing Python dependencies..."
     python -m pip install --upgrade pip
-    pip install akshare sqlalchemy psycopg2-binary pandas python-dotenv
+    pip install akshare sqlalchemy pandas python-dotenv
     
     Set-Location ..
 }

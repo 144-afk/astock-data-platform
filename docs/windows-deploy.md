@@ -1,34 +1,26 @@
-# Windows 11 部署指南
+# Windows 11 部署指南 (SQLite 版本)
 
 ## 环境要求
 
 - Windows 11
 - Node.js 24+ ([下载](https://nodejs.org/))
 - Python 3.12+ ([下载](https://www.python.org/downloads/))
-- PostgreSQL 16+ ([下载](https://www.postgresql.org/download/windows/))
+
+> **注意**: SQLite 版本无需安装 PostgreSQL，数据库文件自动创建在项目目录中。
 
 ## 安装步骤
 
-### 1. 安装 PostgreSQL
+### 1. 安装 Node.js 和 Python
 
-1. 下载并安装 PostgreSQL
-2. 安装时设置 postgres 用户密码（记住这个密码）
-3. 安装完成后，打开 pgAdmin 或命令行创建数据库：
+1. 下载并安装 [Node.js 24+](https://nodejs.org/)
+2. 下载并安装 [Python 3.12+](https://www.python.org/downloads/)
+   - 安装时勾选 "Add Python to PATH"
 
-```sql
-CREATE DATABASE a_stock_data;
-```
+### 2. 安装 pnpm
 
-### 2. 配置环境变量
-
-打开 PowerShell，设置环境变量：
-
+打开 PowerShell，运行：
 ```powershell
-# 临时设置（当前会话有效）
-$env:DATABASE_URL = "postgresql://postgres:你的密码@localhost:5432/a_stock_data"
-
-# 永久设置（推荐）
-[System.Environment]::SetEnvironmentVariable("DATABASE_URL", "postgresql://postgres:你的密码@localhost:5432/a_stock_data", "User")
+npm install -g pnpm
 ```
 
 ### 3. 构建项目
@@ -72,6 +64,14 @@ cd astock-data-platform
 .\scripts\run-collector.ps1 -Type "dragon"
 ```
 
+## 数据库文件位置
+
+SQLite 数据库文件位于：
+- Web 端: `prisma/data/a_stock_data.db`
+- Python 采集端: `data-collector/data/a_stock_data.db`
+
+> **提示**: 两端使用同一个数据库文件，数据自动同步。
+
 ## 常见问题
 
 ### PowerShell 执行策略
@@ -83,12 +83,6 @@ cd astock-data-platform
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### PostgreSQL 连接失败
-
-1. 检查 PostgreSQL 服务是否运行：`Get-Service postgresql*`
-2. 检查密码是否正确
-3. 检查数据库是否存在
-
 ### Python 虚拟环境问题
 
 如果虚拟环境出问题，可以删除重建：
@@ -97,6 +91,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Remove-Item -Recurse -Force data-collector\.venv
 .\scripts\run-collector.ps1 -InitDb
 ```
+
+### 数据库锁定
+
+如果出现数据库锁定错误，确保没有其他程序正在访问数据库文件。
 
 ## 设置开机自启（可选）
 
@@ -107,4 +105,12 @@ Remove-Item -Recurse -Force data-collector\.venv
 $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-WindowStyle Hidden -File C:\path\to\astock-data-platform\scripts\start.ps1"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 Register-ScheduledTask -TaskName "AStockDataPlatform" -Action $action -Trigger $trigger -User "SYSTEM"
+```
+
+## 数据备份
+
+SQLite 数据库是单个文件，备份只需复制数据库文件：
+
+```powershell
+Copy-Item "data-collector\data\a_stock_data.db" "backup\a_stock_data_$(Get-Date -Format 'yyyyMMdd').db"
 ```

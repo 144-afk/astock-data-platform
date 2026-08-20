@@ -1,4 +1,4 @@
-// Prisma Schema for A-Stock Data Platform
+// Prisma Schema for A-Stock Data Platform (SQLite)
 
 generator client {
   provider = "prisma-client-js"
@@ -6,26 +6,26 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 /// 股票日K线数据
 model StockDaily {
   id          BigInt   @id @default(autoincrement())
-  code        String   @db.VarChar(10)
-  name        String?  @db.VarChar(50)
-  tradeDate   DateTime @map("trade_date") @db.Date
+  code        String
+  name        String?
+  tradeDate   DateTime @map("trade_date")
   
-  open        Decimal? @db.Decimal(12, 4)
-  high        Decimal? @db.Decimal(12, 4)
-  low         Decimal? @db.Decimal(12, 4)
-  close       Decimal? @db.Decimal(12, 4)
-  preClose    Decimal? @map("pre_close") @db.Decimal(12, 4)
-  change      Decimal? @db.Decimal(12, 4)
-  pctChange   Decimal? @map("pct_change") @db.Decimal(10, 4)
+  open        Float?
+  high        Float?
+  low         Float?
+  close       Float?
+  preClose    Float?   @map("pre_close")
+  change      Float?
+  pctChange   Float?   @map("pct_change")
   volume      BigInt?
-  amount      Decimal? @db.Decimal(20, 4)
-  turnover    Decimal? @db.Decimal(10, 6)
+  amount      Float?
+  turnover    Float?
   
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -38,19 +38,19 @@ model StockDaily {
 /// 龙虎榜数据
 model DragonTigerList {
   id          BigInt   @id @default(autoincrement())
-  tradeDate   DateTime @map("trade_date") @db.Date
-  code        String   @db.VarChar(10)
-  name        String?  @db.VarChar(50)
+  tradeDate   DateTime @map("trade_date")
+  code        String
+  name        String?
   
-  close       Decimal? @db.Decimal(12, 4)
-  pctChange   Decimal? @map("pct_change") @db.Decimal(10, 4)
-  turnover    Decimal? @db.Decimal(10, 6)
-  amount      Decimal? @db.Decimal(20, 4)
-  netBuy      Decimal? @map("net_buy") @db.Decimal(20, 4)
-  buyAmount   Decimal? @map("buy_amount") @db.Decimal(20, 4)
-  sellAmount  Decimal? @map("sell_amount") @db.Decimal(20, 4)
+  close       Float?
+  pctChange   Float?   @map("pct_change")
+  turnover    Float?
+  amount      Float?
+  netBuy      Float?   @map("net_buy")
+  buyAmount   Float?   @map("buy_amount")
+  sellAmount  Float?   @map("sell_amount")
   
-  reason      String?  @db.VarChar(200)
+  reason      String?
   
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -63,18 +63,18 @@ model DragonTigerList {
 /// 龙虎榜营业部明细
 model DragonTigerDetail {
   id          BigInt   @id @default(autoincrement())
-  tradeDate   DateTime @map("trade_date") @db.Date
-  code        String   @db.VarChar(10)
-  name        String?  @db.VarChar(50)
+  tradeDate   DateTime @map("trade_date")
+  code        String
+  name        String?
   
   rank        Int?
-  trader      String?  @db.VarChar(200)
+  trader      String?
   
-  buyAmount   Decimal? @map("buy_amount") @db.Decimal(20, 4)
-  sellAmount  Decimal? @map("sell_amount") @db.Decimal(20, 4)
-  netAmount   Decimal? @map("net_amount") @db.Decimal(20, 4)
+  buyAmount   Float?   @map("buy_amount")
+  sellAmount  Float?   @map("sell_amount")
+  netAmount   Float?   @map("net_amount")
   
-  direction   String?  @db.VarChar(10)
+  direction   String?
   
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -85,11 +85,11 @@ model DragonTigerDetail {
 /// 数据采集日志
 model CollectionLog {
   id              BigInt   @id @default(autoincrement())
-  collectionDate  DateTime @map("collection_date") @db.Date
-  dataType        String   @map("data_type") @db.VarChar(50)
-  status          String   @db.VarChar(20)
+  collectionDate  DateTime @map("collection_date")
+  dataType        String   @map("data_type")
+  status          String
   count           Int      @default(0)
-  message         String?  @db.VarChar(500)
+  message         String?
   
   startedAt       DateTime? @map("started_at")
   finishedAt      DateTime? @map("finished_at")

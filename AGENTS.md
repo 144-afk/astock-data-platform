@@ -69,7 +69,7 @@
 ### 技术栈
 - **语言**: Python 3.12
 - **数据源**: AKShare（A股免费数据接口）
-- **数据库**: PostgreSQL
+- **数据库**: SQLite（轻量级，无需额外安装）
 - **ORM**: SQLAlchemy 2.0
 
 ### 目录结构
@@ -79,12 +79,14 @@
 │   ├── models.py             # 数据库模型
 │   ├── database.py           # 数据库连接
 │   ├── pyproject.toml        # Python 依赖
+│   ├── data/                 # SQLite 数据库文件
 │   └── .env                  # 环境变量（不提交）
 ├── prisma/                   # Prisma ORM（Next.js 后端）
 │   └── schema.prisma         # 数据库 Schema
 └── scripts/
-    ├── init-db.sh            # 数据库初始化脚本
-    └── run-collector.sh      # 采集器运行脚本
+    ├── build.sh / build.ps1  # 构建脚本
+    ├── start.sh / start.ps1  # 启动脚本
+    └── run-collector.sh / .ps1  # 采集器运行脚本
 ```
 
 ### 数据类型
@@ -96,7 +98,7 @@
 ### 运行采集
 ```bash
 # 初始化数据库
-bash scripts/init-db.sh
+bash scripts/run-collector.sh --init-db
 
 # 采集今日数据
 bash scripts/run-collector.sh
@@ -109,6 +111,18 @@ bash scripts/run-collector.sh --type daily
 
 # 只采集龙虎榜
 bash scripts/run-collector.sh --type dragon
+```
+
+### Windows PowerShell
+```powershell
+# 初始化数据库
+.\scripts\run-collector.ps1 -InitDb
+
+# 采集今日数据
+.\scripts\run-collector.ps1
+
+# 采集指定日期
+.\scripts\run-collector.ps1 -Date "2024-01-15"
 ```
 
 ### API 接口
