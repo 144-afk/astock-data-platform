@@ -1,5 +1,7 @@
 [project]
-requires = [ "nodejs-24" ]
+sub_id = "6d440be0"
+name = "a-stock-data"
+requires = [ "nodejs-24", "python-3.12" ]
 project_type = "web"
 template = "nextjs"
 version = "0.0.35"
@@ -15,3 +17,6 @@ deps = [ "git" ]
 build = [ "bash", "./scripts/build.sh" ]
 run = [ "bash", "./scripts/start.sh" ]
 deps = [ "git" ]
+
+[subprojects]
+path = ["."]

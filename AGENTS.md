@@ -63,3 +63,56 @@
 
 - 模板默认预装核心组件库 `shadcn/ui`，位于`src/components/ui/`目录下
 - Next.js 项目**必须默认**采用 shadcn/ui 组件、风格和规范，**除非用户指定用其他的组件和规范。**
+
+## 数据采集模块
+
+### 技术栈
+- **语言**: Python 3.12
+- **数据源**: AKShare（A股免费数据接口）
+- **数据库**: PostgreSQL
+- **ORM**: SQLAlchemy 2.0
+
+### 目录结构
+```
+├── data-collector/           # Python 数据采集模块
+│   ├── collector.py          # 采集器主程序
+│   ├── models.py             # 数据库模型
+│   ├── database.py           # 数据库连接
+│   ├── pyproject.toml        # Python 依赖
+│   └── .env                  # 环境变量（不提交）
+├── prisma/                   # Prisma ORM（Next.js 后端）
+│   └── schema.prisma         # 数据库 Schema
+└── scripts/
+    ├── init-db.sh            # 数据库初始化脚本
+    └── run-collector.sh      # 采集器运行脚本
+```
+
+### 数据类型
+- **stock_daily**: 股票日K线数据（全市场）
+- **dragon_tiger_list**: 龙虎榜上榜数据
+- **dragon_tiger_detail**: 龙虎榜营业部明细
+- **collection_log**: 采集日志
+
+### 运行采集
+```bash
+# 初始化数据库
+bash scripts/init-db.sh
+
+# 采集今日数据
+bash scripts/run-collector.sh
+
+# 采集指定日期
+bash scripts/run-collector.sh --date 2024-01-15
+
+# 只采集日K线
+bash scripts/run-collector.sh --type daily
+
+# 只采集龙虎榜
+bash scripts/run-collector.sh --type dragon
+```
+
+### API 接口
+- `GET /api/stock/daily` - 查询日K线数据
+- `GET /api/dragon-tiger/list` - 查询龙虎榜列表
+- `GET /api/dragon-tiger/detail` - 查询龙虎榜明细
+- `GET /api/collection/log` - 查询采集日志

@@ -48,6 +48,14 @@ Thumbs.db
 ehthumbs.db
 
 # Logs
+
+# Preview
+.preview
+
+# Data collector
+data-collector/.env
+data-collector/.venv/
+data-collector/__pycache__/
 output.log
 *.log
 *.log.*
