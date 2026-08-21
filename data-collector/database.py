@@ -11,10 +11,21 @@ load_dotenv()
 DB_DIR = Path(__file__).parent / "data"
 DB_DIR.mkdir(exist_ok=True)
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"sqlite:///{DB_DIR / 'a_stock_data.db'}"
-)
+# 默认 SQLite 连接字符串
+DEFAULT_DB_URL = f"sqlite:///{DB_DIR / 'a_stock_data.db'}"
+
+# 获取环境变量，如果是 Prisma 格式则转换为 SQLAlchemy 格式
+env_url = os.getenv("DATABASE_URL", "")
+if env_url.startswith("file:"):
+    # Prisma 格式: file:./data/a_stock_data.db
+    db_path = env_url.replace("file:", "")
+    if not db_path.startswith("/"):
+        db_path = str(Path(__file__).parent / db_path.lstrip("./"))
+    DATABASE_URL = f"sqlite:///{db_path}"
+elif env_url.startswith("sqlite"):
+    DATABASE_URL = env_url
+else:
+    DATABASE_URL = DEFAULT_DB_URL
 
 engine = create_engine(
     DATABASE_URL,

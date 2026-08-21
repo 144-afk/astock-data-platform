@@ -17,7 +17,7 @@ class StockDaily(Base):
     """股票日K线数据"""
     __tablename__ = "stock_daily"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     code = Column(String(10), nullable=False, comment="股票代码")
     name = Column(String(50), comment="股票名称")
     trade_date = Column(Date, nullable=False, comment="交易日期")
@@ -46,7 +46,7 @@ class DragonTigerList(Base):
     """龙虎榜数据"""
     __tablename__ = "dragon_tiger_list"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     trade_date = Column(Date, nullable=False, comment="交易日期")
     code = Column(String(10), nullable=False, comment="股票代码")
     name = Column(String(50), comment="股票名称")
@@ -74,7 +74,7 @@ class DragonTigerDetail(Base):
     """龙虎榜营业部明细"""
     __tablename__ = "dragon_tiger_detail"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     trade_date = Column(Date, nullable=False, comment="交易日期")
     code = Column(String(10), nullable=False, comment="股票代码")
     name = Column(String(50), comment="股票名称")
@@ -99,7 +99,7 @@ class CollectionLog(Base):
     """数据采集日志"""
     __tablename__ = "collection_log"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     collection_date = Column(Date, nullable=False, comment="采集日期")
     data_type = Column(String(50), nullable=False, comment="数据类型")
     status = Column(String(20), nullable=False, comment="状态(success/failed)")

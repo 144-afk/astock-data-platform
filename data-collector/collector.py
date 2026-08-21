@@ -48,14 +48,22 @@ class AStockCollector:
         self.session.commit()
     
     def get_all_stocks(self) -> pd.DataFrame:
-        """获取所有股票列表"""
-        rs = bs.query_stock_basic()
+        """获取所有A股股票列表"""
+        # 使用昨天的日期，避免当天非交易日返回空列表
+        yesterday = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+        rs = bs.query_all_stock(day=yesterday)
         stocks = []
         while rs.error_code == '0' and rs.next():
-            stocks.append(rs.get_row_data())
-        df = pd.DataFrame(stocks, columns=rs.fields)
-        # 只保留 A 股（排除基金、指数等）
-        df = df[df['type'] == '1']  # type=1 表示股票
+            row = rs.get_row_data()
+            code = row[0]  # 格式: sh.600000 或 sz.000001
+            code_name = row[2] if len(row) > 2 else ''  # 股票名称
+            # 通过代码前缀过滤A股：sh.6开头(沪市主板)、sz.0开头(深市主板)、sz.3开头(创业板)
+            if code.startswith('sh.6') or code.startswith('sz.0') or code.startswith('sz.3'):
+                stocks.append({
+                    'code': code.split('.')[1],  # 转为纯6位数字
+                    'code_name': code_name
+                })
+        df = pd.DataFrame(stocks)
         return df
     
     def collect_stock_daily(self, target_date: date = None) -> int:
@@ -83,13 +91,15 @@ class AStockCollector:
             count = 0
             
             for _, stock in stocks_df.iterrows():
-                code = stock['code']  # 格式: sh.600000 或 sz.000001
+                code = stock['code']  # 已经是纯6位数字
                 name = stock.get('code_name', '')
+                # BaoStock 需要带前缀的格式
+                bs_code = f"sh.{code}" if code.startswith('6') else f"sz.{code}"
                 
                 try:
                     # 获取日K线数据
                     rs = bs.query_history_k_data_plus(
-                        code,
+                        bs_code,
                         "date,code,open,high,low,close,preclose,volume,amount,turn,pctChg",
                         start_date=date_str,
                         end_date=date_str,
