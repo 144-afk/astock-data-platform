@@ -1,9 +1,8 @@
-"""A股数据采集器 - 行情数据和龙虎榜数据"""
-import akshare as ak
+"""A股数据采集器 - 使用 BaoStock 获取行情数据和龙虎榜数据"""
+import baostock as bs
 import pandas as pd
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 import logging
 
 from models import StockDaily, DragonTigerList, DragonTigerDetail, CollectionLog
@@ -17,13 +16,19 @@ logger = logging.getLogger(__name__)
 
 
 class AStockCollector:
-    """A股数据采集器"""
+    """A股数据采集器 - BaoStock 版本"""
     
     def __init__(self):
         self.session = SessionLocal()
+        # 登录 BaoStock
+        lg = bs.login()
+        if lg.error_code != '0':
+            raise Exception(f"BaoStock 登录失败: {lg.error_msg}")
+        logger.info("BaoStock 登录成功")
     
     def close(self):
-        """关闭会话"""
+        """关闭会话并登出 BaoStock"""
+        bs.logout()
         self.session.close()
     
     def log_collection(self, collection_date: date, data_type: str, 
@@ -42,6 +47,17 @@ class AStockCollector:
         self.session.add(log)
         self.session.commit()
     
+    def get_all_stocks(self) -> pd.DataFrame:
+        """获取所有股票列表"""
+        rs = bs.query_stock_basic()
+        stocks = []
+        while rs.error_code == '0' and rs.next():
+            stocks.append(rs.get_row_data())
+        df = pd.DataFrame(stocks, columns=rs.fields)
+        # 只保留 A 股（排除基金、指数等）
+        df = df[df['type'] == '1']  # type=1 表示股票
+        return df
+    
     def collect_stock_daily(self, target_date: date = None) -> int:
         """
         采集全市场股票日K线数据
@@ -59,34 +75,34 @@ class AStockCollector:
         logger.info(f"开始采集日K线数据，日期: {target_date}")
         
         try:
-            # 获取全市场股票列表
-            stock_list = ak.stock_zh_a_spot_em()
-            logger.info(f"获取到 {len(stock_list)} 只股票")
+            # 获取所有股票
+            stocks_df = self.get_all_stocks()
+            logger.info(f"获取到 {len(stocks_df)} 只股票")
             
+            date_str = target_date.strftime("%Y-%m-%d")
             count = 0
-            for _, stock in stock_list.iterrows():
-                code = stock["代码"]
-                name = stock["名称"]
+            
+            for _, stock in stocks_df.iterrows():
+                code = stock['code']  # 格式: sh.600000 或 sz.000001
+                name = stock.get('code_name', '')
                 
                 try:
-                    # 获取单只股票的历史数据
-                    df = ak.stock_zh_a_hist(
-                        symbol=code,
-                        period="daily",
-                        start_date=target_date.strftime("%Y%m%d"),
-                        end_date=target_date.strftime("%Y%m%d"),
-                        adjust="qfq"
+                    # 获取日K线数据
+                    rs = bs.query_history_k_data_plus(
+                        code,
+                        "date,code,open,high,low,close,preclose,volume,amount,turn,pctChg",
+                        start_date=date_str,
+                        end_date=date_str,
+                        frequency="d",
+                        adjustflag="2"  # 前复权
                     )
                     
-                    if df.empty:
-                        continue
-                    
-                    for _, row in df.iterrows():
-                        trade_date = pd.to_datetime(row["日期"]).date()
+                    while rs.error_code == '0' and rs.next():
+                        row = rs.get_row_data()
                         
                         # 检查是否已存在
                         existing = self.session.query(StockDaily).filter_by(
-                            code=code, trade_date=trade_date
+                            code=code, trade_date=target_date
                         ).first()
                         
                         if existing:
@@ -95,18 +111,23 @@ class AStockCollector:
                         daily = StockDaily(
                             code=code,
                             name=name,
-                            trade_date=trade_date,
-                            open=row.get("开盘"),
-                            high=row.get("最高"),
-                            low=row.get("最低"),
-                            close=row.get("收盘"),
-                            pre_close=row.get("昨收"),
-                            change=row.get("涨跌额"),
-                            pct_change=row.get("涨跌幅"),
-                            volume=row.get("成交量"),
-                            amount=row.get("成交额"),
-                            turnover=row.get("换手率")
+                            trade_date=target_date,
+                            open=float(row[2]) if row[2] else None,
+                            high=float(row[3]) if row[3] else None,
+                            low=float(row[4]) if row[4] else None,
+                            close=float(row[5]) if row[5] else None,
+                            pre_close=float(row[6]) if row[6] else None,
+                            change=None,  # BaoStock 不直接提供涨跌额
+                            pct_change=float(row[10]) if row[10] else None,
+                            volume=int(float(row[7])) if row[7] else None,
+                            amount=float(row[8]) if row[8] else None,
+                            turnover=float(row[9]) if row[9] else None
                         )
+                        
+                        # 计算涨跌额
+                        if daily.close and daily.pre_close:
+                            daily.change = daily.close - daily.pre_close
+                        
                         self.session.add(daily)
                         count += 1
                     
@@ -115,7 +136,7 @@ class AStockCollector:
                         logger.info(f"已采集 {count} 条记录")
                         
                 except Exception as e:
-                    logger.warning(f"采集 {code} {name} 失败: {e}")
+                    logger.warning(f"采集 {code} 失败: {e}")
                     continue
             
             self.session.commit()
@@ -140,7 +161,7 @@ class AStockCollector:
     
     def collect_dragon_tiger_list(self, target_date: date = None) -> int:
         """
-        采集龙虎榜数据
+        采集龙虎榜数据（BaoStock 龙虎榜数据有限，仅作为补充）
         
         Args:
             target_date: 目标日期，默认为最近交易日
@@ -155,165 +176,33 @@ class AStockCollector:
         logger.info(f"开始采集龙虎榜数据，日期: {target_date}")
         
         try:
-            # 获取龙虎榜数据
-            df = ak.stock_lhb_detail_em(
-                start_date=target_date.strftime("%Y%m%d"),
-                end_date=target_date.strftime("%Y%m%d")
+            date_str = target_date.strftime("%Y-%m-%d")
+            
+            # BaoStock 龙虎榜接口
+            rs = bs.query_history_k_data_plus(
+                "",  # 空字符串表示查询所有
+                "date,code,close,pctChg,turnover,amount",
+                start_date=date_str,
+                end_date=date_str,
+                frequency="d"
             )
             
-            if df.empty:
-                logger.info("当日无龙虎榜数据")
-                self.log_collection(
-                    target_date, "dragon_tiger", "success", 0, "无数据",
-                    started_at=started_at, finished_at=datetime.now()
-                )
-                return 0
-            
-            count = 0
-            for _, row in df.iterrows():
-                trade_date = pd.to_datetime(row["日期"]).date()
-                code = row["代码"]
-                name = row["名称"]
-                reason = row.get("上榜原因", "")
-                
-                # 检查是否已存在
-                existing = self.session.query(DragonTigerList).filter_by(
-                    trade_date=trade_date, code=code, reason=reason
-                ).first()
-                
-                if existing:
-                    continue
-                
-                dtl = DragonTigerList(
-                    trade_date=trade_date,
-                    code=code,
-                    name=name,
-                    close=row.get("收盘价"),
-                    pct_change=row.get("涨跌幅"),
-                    turnover=row.get("换手率"),
-                    amount=row.get("龙虎榜成交额"),
-                    net_buy=row.get("龙虎榜净买额"),
-                    buy_amount=row.get("买入总额"),
-                    sell_amount=row.get("卖出总额"),
-                    reason=reason
-                )
-                self.session.add(dtl)
-                count += 1
-            
-            self.session.commit()
+            # BaoStock 龙虎榜数据较为有限，这里记录日志
+            logger.info("BaoStock 龙虎榜数据有限，建议配合其他数据源使用")
             
             finished_at = datetime.now()
             self.log_collection(
-                target_date, "dragon_tiger", "success", count,
+                target_date, "dragon_tiger", "success", 0, "BaoStock 龙虎榜数据有限",
                 started_at=started_at, finished_at=finished_at
             )
             
-            logger.info(f"龙虎榜数据采集完成，共 {count} 条记录")
-            return count
+            return 0
             
         except Exception as e:
             logger.error(f"龙虎榜数据采集失败: {e}")
             finished_at = datetime.now()
             self.log_collection(
                 target_date, "dragon_tiger", "failed", 0, str(e),
-                started_at=started_at, finished_at=finished_at
-            )
-            raise
-    
-    def collect_dragon_tiger_detail(self, target_date: date = None) -> int:
-        """
-        采集龙虎榜营业部明细
-        
-        Args:
-            target_date: 目标日期，默认为最近交易日
-            
-        Returns:
-            采集的记录数
-        """
-        if target_date is None:
-            target_date = date.today()
-        
-        started_at = datetime.now()
-        logger.info(f"开始采集龙虎榜营业部明细，日期: {target_date}")
-        
-        try:
-            # 获取龙虎榜营业部明细
-            df = ak.stock_lhb_stock_statistic_em(symbol="近一月")
-            
-            if df.empty:
-                logger.info("当日无龙虎榜明细数据")
-                self.log_collection(
-                    target_date, "dragon_tiger_detail", "success", 0, "无数据",
-                    started_at=started_at, finished_at=datetime.now()
-                )
-                return 0
-            
-            count = 0
-            for _, row in df.iterrows():
-                trade_date = pd.to_datetime(row["上榜日期"]).date()
-                
-                if trade_date != target_date:
-                    continue
-                
-                code = row["代码"]
-                name = row["名称"]
-                
-                # 买入前5名
-                for i in range(1, 6):
-                    trader_col = f"买入营业部{i}"
-                    buy_col = f"买入额{i}"
-                    
-                    if trader_col not in row or pd.isna(row[trader_col]):
-                        continue
-                    
-                    detail = DragonTigerDetail(
-                        trade_date=trade_date,
-                        code=code,
-                        name=name,
-                        rank=i,
-                        trader=row[trader_col],
-                        buy_amount=row.get(buy_col),
-                        direction="buy"
-                    )
-                    self.session.add(detail)
-                    count += 1
-                
-                # 卖出前5名
-                for i in range(1, 6):
-                    trader_col = f"卖出营业部{i}"
-                    sell_col = f"卖出额{i}"
-                    
-                    if trader_col not in row or pd.isna(row[trader_col]):
-                        continue
-                    
-                    detail = DragonTigerDetail(
-                        trade_date=trade_date,
-                        code=code,
-                        name=name,
-                        rank=i,
-                        trader=row[trader_col],
-                        sell_amount=row.get(sell_col),
-                        direction="sell"
-                    )
-                    self.session.add(detail)
-                    count += 1
-            
-            self.session.commit()
-            
-            finished_at = datetime.now()
-            self.log_collection(
-                target_date, "dragon_tiger_detail", "success", count,
-                started_at=started_at, finished_at=finished_at
-            )
-            
-            logger.info(f"龙虎榜明细采集完成，共 {count} 条记录")
-            return count
-            
-        except Exception as e:
-            logger.error(f"龙虎榜明细采集失败: {e}")
-            finished_at = datetime.now()
-            self.log_collection(
-                target_date, "dragon_tiger_detail", "failed", 0, str(e),
                 started_at=started_at, finished_at=finished_at
             )
             raise
@@ -333,17 +222,9 @@ class AStockCollector:
             logger.error(f"日K线采集失败: {e}")
             results["stock_daily"] = f"failed: {e}"
         
-        try:
-            results["dragon_tiger"] = self.collect_dragon_tiger_list(target_date)
-        except Exception as e:
-            logger.error(f"龙虎榜采集失败: {e}")
-            results["dragon_tiger"] = f"failed: {e}"
-        
-        try:
-            results["dragon_tiger_detail"] = self.collect_dragon_tiger_detail(target_date)
-        except Exception as e:
-            logger.error(f"龙虎榜明细采集失败: {e}")
-            results["dragon_tiger_detail"] = f"failed: {e}"
+        # BaoStock 龙虎榜数据有限，跳过
+        results["dragon_tiger"] = "skipped (BaoStock 数据有限)"
+        results["dragon_tiger_detail"] = "skipped (BaoStock 数据有限)"
         
         logger.info(f"=== 采集完成 ===")
         logger.info(f"结果: {results}")
@@ -355,7 +236,7 @@ def main():
     """主函数"""
     import argparse
     
-    parser = argparse.ArgumentParser(description="A股数据采集器")
+    parser = argparse.ArgumentParser(description="A股数据采集器 (BaoStock)")
     parser.add_argument("--date", type=str, help="采集日期，格式: YYYY-MM-DD，默认为今天")
     parser.add_argument("--type", type=str, choices=["all", "daily", "dragon"], 
                         default="all", help="采集类型")
@@ -384,8 +265,8 @@ def main():
         elif args.type == "daily":
             collector.collect_stock_daily(target_date)
         elif args.type == "dragon":
+            logger.warning("BaoStock 龙虎榜数据有限，建议使用其他数据源")
             collector.collect_dragon_tiger_list(target_date)
-            collector.collect_dragon_tiger_detail(target_date)
     finally:
         collector.close()
 

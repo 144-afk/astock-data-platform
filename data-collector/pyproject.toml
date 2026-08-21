@@ -1,10 +1,10 @@
 [project]
 name = "a-stock-data-collector"
 version = "0.1.0"
-description = "A股市场数据采集模块"
+description = "A股市场数据采集模块 (BaoStock)"
 requires-python = ">=3.12"
 dependencies = [
-    "akshare>=1.14.0",
+    "baostock>=0.8.8",
     "sqlalchemy>=2.0.0",
     "pandas>=2.0.0",
     "python-dotenv>=1.0.0",

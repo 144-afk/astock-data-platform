@@ -30,7 +30,7 @@ if [ -d "data-collector" ]; then
     source .venv/bin/activate
     echo "Installing Python dependencies..."
     pip install --upgrade pip
-    pip install akshare sqlalchemy pandas python-dotenv
+    pip install baostock sqlalchemy pandas python-dotenv
     cd ..
 fi
 
