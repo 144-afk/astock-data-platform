@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Search, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { KLineChart } from "@/components/charts/KLineChart";
 
 interface StockDaily {
   id: string;
@@ -114,6 +115,31 @@ export default function StockPage() {
             </div>
           </CardHeader>
         </Card>
+
+        {/* K-Line Chart */}
+        {data.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                <CardTitle>{data[0]?.name} ({data[0]?.code}) K线图</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <KLineChart
+                data={data.map(d => ({
+                  tradeDate: d.tradeDate,
+                  open: parseFloat(d.open),
+                  close: parseFloat(d.close),
+                  low: parseFloat(d.low),
+                  high: parseFloat(d.high),
+                  volume: parseInt(d.volume),
+                }))}
+                title=""
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Data Table */}
         <Card>
