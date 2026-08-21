@@ -17,15 +17,20 @@ DEFAULT_DB_URL = f"sqlite:///{DB_DIR / 'a_stock_data.db'}"
 # 获取环境变量，如果是 Prisma 格式则转换为 SQLAlchemy 格式
 env_url = os.getenv("DATABASE_URL", "")
 if env_url.startswith("file:"):
-    # Prisma 格式: file:./data/a_stock_data.db
+    # Prisma 格式: file:./data/a_stock_data.db 或 file:../data/a_stock_data.db
     db_path = env_url.replace("file:", "")
     if not db_path.startswith("/"):
-        db_path = str(Path(__file__).parent / db_path.lstrip("./"))
+        # 相对于 data-collector 目录解析路径
+        db_path = str((Path(__file__).parent / db_path).resolve())
     DATABASE_URL = f"sqlite:///{db_path}"
 elif env_url.startswith("sqlite"):
     DATABASE_URL = env_url
 else:
-    DATABASE_URL = DEFAULT_DB_URL
+    # 默认使用项目根目录的 data 目录
+    project_root = Path(__file__).parent.parent
+    default_db_dir = project_root / "data"
+    default_db_dir.mkdir(exist_ok=True)
+    DATABASE_URL = f"sqlite:///{default_db_dir / 'a_stock_data.db'}"
 
 engine = create_engine(
     DATABASE_URL,

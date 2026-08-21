@@ -29,6 +29,15 @@ kill_port_if_listening() {
 
 echo "Clearing port ${DEPLOY_RUN_PORT} before start."
 kill_port_if_listening
+
+# Load .env file if it exists
+if [ -f .env ]; then
+    echo "Loading .env file..."
+    set -a
+    source .env
+    set +a
+fi
+
 echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for dev..."
 
 PORT=${DEPLOY_RUN_PORT} pnpm tsx watch src/server.ts

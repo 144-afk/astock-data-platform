@@ -63,8 +63,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to fetch stock daily data:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch data" },
+      { success: false, error: "Failed to fetch data", details: errorMessage },
       { status: 500 }
     );
   }

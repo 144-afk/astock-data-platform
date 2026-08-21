@@ -1,3 +1,9 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env file from project root
+config({ path: resolve(__dirname, '../../.env') });
+
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';

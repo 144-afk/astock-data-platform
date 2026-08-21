@@ -1,17 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import path from "path";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  // Use absolute path for SQLite database
+  const dbPath = path.resolve(process.cwd(), "data/a_stock_data.db");
   
-  if (!connectionString) {
-    console.warn("DATABASE_URL not set, using default SQLite path");
-  }
+  console.log(`Connecting to database: ${dbPath}`);
   
-  return new PrismaClient();
+  const adapterFactory = new PrismaBetterSqlite3({
+    url: `file:${dbPath}`,
+  });
+  
+  // Pass the adapter factory directly
+  return new PrismaClient({ adapter: adapterFactory });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
