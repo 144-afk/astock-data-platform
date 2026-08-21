@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Search, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { ArrowLeft, Search, TrendingUp } from "lucide-react";
 import { KLineChart } from "@/components/charts/KLineChart";
 
 interface StockDaily {
@@ -24,30 +24,32 @@ interface StockDaily {
   turnover: string;
 }
 
+type Period = "day" | "week" | "month";
+
 export default function StockPage() {
   const [data, setData] = useState<StockDaily[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [period, setPeriod] = useState<Period>("day");
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        pageSize: "20",
+        pageSize: "50",
+        period,
       });
       if (code) params.set("code", code);
 
       const res = await fetch(`/api/stock/daily?${params}`);
       const json = await res.json();
-      
+
       if (json.success) {
         setData(json.data);
         setTotal(json.pagination.total);
-        setTotalPages(json.pagination.totalPages);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -58,11 +60,17 @@ export default function StockPage() {
 
   useEffect(() => {
     fetchData();
-  }, [page, code]);
+  }, [page, code, period]);
 
   const handleSearch = () => {
     setPage(1);
     fetchData();
+  };
+
+  const periodLabels: Record<Period, string> = {
+    day: "日K",
+    week: "周K",
+    month: "月K",
   };
 
   const formatNumber = (num: string) => {
@@ -120,14 +128,30 @@ export default function StockPage() {
         {data.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                <CardTitle>{data[0]?.name} ({data[0]?.code}) K线图</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <CardTitle>
+                    {data[0]?.name} ({data[0]?.code}) {periodLabels[period]}线图
+                  </CardTitle>
+                </div>
+                <div className="flex gap-2">
+                  {(["day", "week", "month"] as Period[]).map((p) => (
+                    <Button
+                      key={p}
+                      variant={period === p ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriod(p)}
+                    >
+                      {periodLabels[p]}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <KLineChart
-                data={data.map(d => ({
+                data={data.map((d) => ({
                   tradeDate: d.tradeDate,
                   open: parseFloat(d.open),
                   close: parseFloat(d.close),
@@ -202,35 +226,6 @@ export default function StockPage() {
                     )}
                   </TableBody>
                 </Table>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <div className="text-sm text-slate-500">
-                      第 {page} / {totalPages} 页
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={page <= 1}
-                        onClick={() => setPage(p => p - 1)}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        上一页
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={page >= totalPages}
-                        onClick={() => setPage(p => p + 1)}
-                      >
-                        下一页
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </CardContent>
